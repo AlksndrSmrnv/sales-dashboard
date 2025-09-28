@@ -1,87 +1,32 @@
 // Глобальные переменные
 let salesData = [];
-let regionMapping = {};
+let warehouseMapping = {};
 let chart;
 
-// База данных соответствия городов и регионов
-const cityToRegion = {
-    'Москва': 'Центральный',
-    'Санкт-Петербург': 'Северо-Западный',
-    'Новосибирск': 'Сибирский',
-    'Екатеринбург': 'Уральский',
-    'Казань': 'Приволжский',
-    'Нижний Новгород': 'Приволжский',
-    'Челябинск': 'Уральский',
-    'Самара': 'Приволжский',
-    'Омск': 'Сибирский',
-    'Ростов-на-Дону': 'Южный',
-    'Уфа': 'Приволжский',
-    'Красноярск': 'Сибирский',
-    'Воронеж': 'Центральный',
-    'Пермь': 'Приволжский',
-    'Волгоград': 'Южный',
-    'Краснодар': 'Южный',
-    'Саратов': 'Приволжский',
-    'Тюмень': 'Уральский',
-    'Тольятти': 'Приволжский',
-    'Ижевск': 'Приволжский',
-    'Барнаул': 'Сибирский',
-    'Ульяновск': 'Приволжский',
-    'Иркутск': 'Сибирский',
-    'Хабаровск': 'Дальневосточный',
-    'Ярославль': 'Центральный',
-    'Владивосток': 'Дальневосточный',
-    'Махачкала': 'Северо-Кавказский',
-    'Томск': 'Сибирский',
-    'Оренбург': 'Приволжский',
-    'Кемерово': 'Сибирский',
-    'Новокузнецк': 'Сибирский',
-    'Рязань': 'Центральный',
-    'Астрахань': 'Южный',
-    'Пенза': 'Приволжский',
-    'Липецк': 'Центральный',
-    'Тула': 'Центральный',
-    'Киров': 'Приволжский',
-    'Чебоксары': 'Приволжский',
-    'Калининград': 'Северо-Западный',
-    'Брянск': 'Центральный',
-    'Курск': 'Центральный',
-    'Иваново': 'Центральный',
-    'Магнитогорск': 'Уральский',
-    'Тверь': 'Центральный',
-    'Ставрополь': 'Северо-Кавказский',
-    'Нижний Тагил': 'Уральский',
-    'Белгород': 'Центральный',
-    'Архангельск': 'Северо-Западный',
-    'Владимир': 'Центральный',
-    'Сочи': 'Южный',
-    'Курган': 'Уральский',
-    'Орёл': 'Центральный',
-    'Смоленск': 'Центральный',
-    'Череповец': 'Северо-Западный',
-    'Волжский': 'Южный',
-    'Мурманск': 'Северо-Западный',
-    'Якутск': 'Дальневосточный',
-    'Чита': 'Дальневосточный'
-};
+// База данных соответствия городов и складов (загружается из файла)
+let cityToWarehouse = {};
 
 // Инициализация приложения
-function initializeApp() {
+async function initializeApp() {
     console.log('Инициализация приложения...');
+
+
+    // Загружаем данные о складах
+    await loadWarehouseData();
 
     // Проверяем доступность всех необходимых элементов
     const fileInput = document.getElementById('excelFile');
     const productFilter = document.getElementById('productFilter');
-    const regionFilter = document.getElementById('regionFilter');
+    const warehouseFilter = document.getElementById('warehouseFilter');
 
-    if (!fileInput || !productFilter || !regionFilter) {
+    if (!fileInput || !productFilter || !warehouseFilter) {
         console.error('Не найдены необходимые элементы DOM');
         return;
     }
 
     fileInput.addEventListener('change', handleFileUpload);
     productFilter.addEventListener('change', applyFilters);
-    regionFilter.addEventListener('change', applyFilters);
+    warehouseFilter.addEventListener('change', applyFilters);
 
     console.log('Приложение инициализировано успешно');
 }
@@ -91,6 +36,97 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
     initializeApp();
+}
+
+// Загрузка данных о складах из файла
+async function loadWarehouseData() {
+    try {
+        const response = await fetch('склады.txt');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const text = await response.text();
+
+        // Парсим данные из файла (формат: Город:Склад)
+        const lines = text.split('\n').filter(line => line.trim());
+        cityToWarehouse = {};
+
+        lines.forEach(line => {
+            const [city, warehouse] = line.split(':').map(s => s.trim());
+            if (city && warehouse) {
+                cityToWarehouse[city] = warehouse;
+            }
+        });
+
+        console.log('Загружены данные о складах:', Object.keys(cityToWarehouse).length, 'городов');
+        return cityToWarehouse;
+    } catch (error) {
+        console.error("Ошибка при загрузке данных о складах:", error);
+        console.log("Используем встроенные данные о складах");
+        // Используем встроенные данные в случае ошибки
+        cityToWarehouse = {
+            "Москва": "Центральный склад",
+            "Санкт-Петербург": "Северо-Западный склад",
+            "Новосибирск": "Сибирский склад",
+            "Екатеринбург": "Уральский склад",
+            "Казань": "Приволжский склад",
+            "Нижний Новгород": "Приволжский склад",
+            "Челябинск": "Уральский склад",
+            "Самара": "Приволжский склад",
+            "Омск": "Сибирский склад",
+            "Ростов-на-Дону": "Южный склад",
+            "Уфа": "Приволжский склад",
+            "Красноярск": "Сибирский склад",
+            "Воронеж": "Центральный склад",
+            "Пермь": "Приволжский склад",
+            "Волгоград": "Южный склад",
+            "Краснодар": "Южный склад",
+            "Саратов": "Приволжский склад",
+            "Тюмень": "Уральский склад",
+            "Тольятти": "Приволжский склад",
+            "Ижевск": "Приволжский склад",
+            "Барнаул": "Сибирский склад",
+            "Ульяновск": "Приволжский склад",
+            "Иркутск": "Сибирский склад",
+            "Хабаровск": "Дальневосточный склад",
+            "Ярославль": "Центральный склад",
+            "Владивосток": "Дальневосточный склад",
+            "Махачкала": "Северо-Кавказский склад",
+            "Томск": "Сибирский склад",
+            "Оренбург": "Приволжский склад",
+            "Кемерово": "Сибирский склад",
+            "Новокузнецк": "Сибирский склад",
+            "Рязань": "Центральный склад",
+            "Астрахань": "Южный склад",
+            "Пенза": "Приволжский склад",
+            "Липецк": "Центральный склад",
+            "Тула": "Центральный склад",
+            "Киров": "Приволжский склад",
+            "Чебоксары": "Приволжский склад",
+            "Калининград": "Северо-Западный склад",
+            "Брянск": "Центральный склад",
+            "Курск": "Центральный склад",
+            "Иваново": "Центральный склад",
+            "Магнитогорск": "Уральский склад",
+            "Тверь": "Центральный склад",
+            "Ставрополь": "Северо-Кавказский склад",
+            "Нижний Тагил": "Уральский склад",
+            "Белгород": "Центральный склад",
+            "Архангельск": "Северо-Западный склад",
+            "Владимир": "Центральный склад",
+            "Сочи": "Южный склад",
+            "Курган": "Уральский склад",
+            "Орёл": "Центральный склад",
+            "Смоленск": "Центральный склад",
+            "Череповец": "Северо-Западный склад",
+            "Волжский": "Южный склад",
+            "Мурманск": "Северо-Западный склад",
+            "Якутск": "Дальневосточный склад",
+            "Чита": "Дальневосточный склад"
+        };
+        console.log("Загружены встроенные данные о складах:", Object.keys(cityToWarehouse).length, "городов");
+        return cityToWarehouse;
+    }
 }
 
 // Обработка загрузки файла
@@ -253,10 +289,10 @@ function processSalesData(data) {
         }
 
         if (city && product) {
-            const region = getRegionByCity(city);
+            const warehouse = getWarehouseByCity(city);
             salesData.push({
                 city,
-                region,
+                warehouse,
                 product,
                 quantity,
                 amount
@@ -333,33 +369,33 @@ function findColumnIndex(headers, possibleNames) {
     return -1;
 }
 
-// Получение региона по городу
-function getRegionByCity(city) {
+// Получение склада по городу
+function getWarehouseByCity(city) {
     const normalizedCity = city.trim();
 
     // Прямое соответствие
-    if (cityToRegion[normalizedCity]) {
-        return cityToRegion[normalizedCity];
+    if (cityToWarehouse[normalizedCity]) {
+        return cityToWarehouse[normalizedCity];
     }
 
     // Поиск по частичному совпадению
-    for (const [knownCity, region] of Object.entries(cityToRegion)) {
+    for (const [knownCity, region] of Object.entries(cityToWarehouse)) {
         if (normalizedCity.includes(knownCity) || knownCity.includes(normalizedCity)) {
             return region;
         }
     }
 
-    return 'Другие регионы';
+    return 'Другие склады';
 }
 
 // Обновление фильтров
 function updateFilters() {
     const productFilter = document.getElementById('productFilter');
-    const regionFilter = document.getElementById('regionFilter');
+    const warehouseFilter = document.getElementById('warehouseFilter');
 
-    // Получаем уникальные товары и регионы
+    // Получаем уникальные товары и склады
     const products = [...new Set(salesData.map(item => item.product))].sort();
-    const regions = [...new Set(salesData.map(item => item.region))].sort();
+    const warehouses = [...new Set(salesData.map(item => item.warehouse))].sort();
 
     // Очищаем и заполняем фильтр товаров
     productFilter.innerHTML = '<option value="">Все товары</option>';
@@ -370,13 +406,13 @@ function updateFilters() {
         productFilter.appendChild(option);
     });
 
-    // Очищаем и заполняем фильтр регионов
-    regionFilter.innerHTML = '<option value="">Все регионы</option>';
-    regions.forEach(region => {
+    // Очищаем и заполняем фильтр складов
+    warehouseFilter.innerHTML = '<option value="">Все склады</option>';
+    warehouses.forEach(region => {
         const option = document.createElement('option');
         option.value = region;
         option.textContent = region;
-        regionFilter.appendChild(option);
+        warehouseFilter.appendChild(option);
     });
 }
 
@@ -389,11 +425,11 @@ function applyFilters() {
 // Получение отфильтрованных данных
 function getFilteredData() {
     const productFilter = document.getElementById('productFilter').value;
-    const regionFilter = document.getElementById('regionFilter').value;
+    const warehouseFilter = document.getElementById('warehouseFilter').value;
 
     return salesData.filter(item => {
         return (!productFilter || item.product === productFilter) &&
-               (!regionFilter || item.region === regionFilter);
+               (!warehouseFilter || item.warehouse === warehouseFilter);
     });
 }
 
@@ -401,40 +437,40 @@ function getFilteredData() {
 function updateVisualization() {
     const filteredData = getFilteredData();
 
-    // Агрегация данных по регионам
-    const regionStats = {};
+    // Агрегация данных по складам
+    const warehouseStats = {};
     filteredData.forEach(item => {
-        if (!regionStats[item.region]) {
-            regionStats[item.region] = {
+        if (!warehouseStats[item.warehouse]) {
+            warehouseStats[item.warehouse] = {
                 orders: 0,
                 amount: 0
             };
         }
-        regionStats[item.region].orders += item.quantity;
-        regionStats[item.region].amount += item.amount;
+        warehouseStats[item.warehouse].orders += item.quantity;
+        warehouseStats[item.warehouse].amount += item.amount;
     });
 
-    updateChart(regionStats);
-    updateTable(regionStats);
+    updateChart(warehouseStats);
+    updateTable(warehouseStats);
 }
 
 // Обновление круговой диаграммы
-function updateChart(regionStats) {
+function updateChart(warehouseStats) {
     if (typeof Chart === 'undefined') {
         console.error('Chart.js не доступен');
-        document.getElementById('regionChart').parentElement.innerHTML =
+        document.getElementById('warehouseChart').parentElement.innerHTML =
             '<p class="text-danger">Ошибка загрузки Chart.js</p>';
         return;
     }
 
-    const ctx = document.getElementById('regionChart').getContext('2d');
+    const ctx = document.getElementById('warehouseChart').getContext('2d');
 
     if (chart) {
         chart.destroy();
     }
 
-    const labels = Object.keys(regionStats);
-    const data = Object.values(regionStats).map(stat => stat.orders);
+    const labels = Object.keys(warehouseStats);
+    const data = Object.values(warehouseStats).map(stat => stat.orders);
     const colors = generateColors(labels.length);
 
     try {
@@ -472,21 +508,21 @@ function updateChart(regionStats) {
         });
     } catch (error) {
         console.error('Ошибка создания диаграммы:', error);
-        document.getElementById('regionChart').parentElement.innerHTML =
+        document.getElementById('warehouseChart').parentElement.innerHTML =
             '<p class="text-danger">Ошибка создания диаграммы: ' + error.message + '</p>';
     }
 }
 
 // Обновление таблицы
-function updateTable(regionStats) {
-    const tbody = document.getElementById('regionTableBody');
+function updateTable(warehouseStats) {
+    const tbody = document.getElementById('warehouseTableBody');
     tbody.innerHTML = '';
 
-    // Сортируем регионы по количеству заказов
-    const sortedRegions = Object.entries(regionStats)
+    // Сортируем склады по количеству заказов
+    const sortedWarehouses = Object.entries(warehouseStats)
         .sort(([,a], [,b]) => b.orders - a.orders);
 
-    sortedRegions.forEach(([region, stats]) => {
+    sortedWarehouses.forEach(([region, stats]) => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${region}</td>
@@ -500,11 +536,11 @@ function updateTable(regionStats) {
 // Обновление детальной информации
 function updateDetails() {
     const productFilter = document.getElementById('productFilter').value;
-    const regionFilter = document.getElementById('regionFilter').value;
+    const warehouseFilter = document.getElementById('warehouseFilter').value;
     const detailsContent = document.getElementById('detailsContent');
 
-    if (!productFilter && !regionFilter) {
-        detailsContent.innerHTML = '<p class="text-muted">Выберите товар или регион для просмотра детальной информации</p>';
+    if (!productFilter && !warehouseFilter) {
+        detailsContent.innerHTML = '<p class="text-muted">Выберите товар или склад для просмотра детальной информации</p>';
         return;
     }
 
@@ -512,32 +548,32 @@ function updateDetails() {
 
     if (productFilter) {
         showProductDetails(productFilter, filteredData, detailsContent);
-    } else if (regionFilter) {
-        showRegionDetails(regionFilter, filteredData, detailsContent);
+    } else if (warehouseFilter) {
+        showWarehouseDetails(warehouseFilter, filteredData, detailsContent);
     }
 }
 
 // Показать детали по товару
 function showProductDetails(product, data, container) {
     const productData = data.filter(item => item.product === product);
-    const regionStats = {};
+    const warehouseStats = {};
 
     productData.forEach(item => {
-        if (!regionStats[item.region]) {
-            regionStats[item.region] = { orders: 0, amount: 0 };
+        if (!warehouseStats[item.warehouse]) {
+            warehouseStats[item.warehouse] = { orders: 0, amount: 0 };
         }
-        regionStats[item.region].orders += item.quantity;
-        regionStats[item.region].amount += item.amount;
+        warehouseStats[item.warehouse].orders += item.quantity;
+        warehouseStats[item.warehouse].amount += item.amount;
     });
 
-    const sortedRegions = Object.entries(regionStats)
+    const sortedWarehouses = Object.entries(warehouseStats)
         .sort(([,a], [,b]) => b.orders - a.orders);
 
-    let html = `<h6>Продажи товара "${product}" по регионам:</h6>`;
+    let html = `<h6>Продажи товара "${product}" по складам:</h6>`;
     html += '<div class="table-responsive"><table class="table table-sm">';
-    html += '<thead><tr><th>Регион</th><th>Количество</th><th>Сумма</th></tr></thead><tbody>';
+    html += '<thead><tr><th>Склад</th><th>Количество</th><th>Сумма</th></tr></thead><tbody>';
 
-    sortedRegions.forEach(([region, stats]) => {
+    sortedWarehouses.forEach(([region, stats]) => {
         html += `<tr><td>${region}</td><td>${stats.orders}</td><td>${formatCurrency(stats.amount)}</td></tr>`;
     });
 
@@ -545,12 +581,12 @@ function showProductDetails(product, data, container) {
     container.innerHTML = html;
 }
 
-// Показать детали по региону
-function showRegionDetails(region, data, container) {
-    const regionData = data.filter(item => item.region === region);
+// Показать детали по складу
+function showWarehouseDetails(region, data, container) {
+    const warehouseData = data.filter(item => item.warehouse === region);
     const productStats = {};
 
-    regionData.forEach(item => {
+    warehouseData.forEach(item => {
         if (!productStats[item.product]) {
             productStats[item.product] = { orders: 0, amount: 0 };
         }
@@ -561,7 +597,7 @@ function showRegionDetails(region, data, container) {
     const sortedProducts = Object.entries(productStats)
         .sort(([,a], [,b]) => b.orders - a.orders);
 
-    let html = `<h6>Товары в регионе "${region}":</h6>`;
+    let html = `<h6>Товары на складе "${region}":</h6>`;
     html += '<div class="table-responsive"><table class="table table-sm">';
     html += '<thead><tr><th>Товар</th><th>Количество</th><th>Сумма</th></tr></thead><tbody>';
 
