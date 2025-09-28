@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Демо - Анализ продаж по регионам</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 0;
+        }
+        .feature-card {
+            transition: transform 0.3s;
+            height: 100%;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .demo-screenshot {
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .cta-section {
+            background-color: #f8f9fa;
+            padding: 60px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold mb-4">📊 Анализ продаж по регионам России</h1>
+                    <p class="lead mb-4">Веб-приложение для автоматического анализа Excel файлов с данными о продажах. Загрузите файл и получите подробную аналитику по федеральным округам.</p>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                        <a href="index_excel.html" class="btn btn-light btn-lg px-4 me-md-2">🚀 Запустить приложение</a>
+                        <a href="продажи.xlsx" download class="btn btn-outline-light btn-lg px-4">📁 Скачать пример</a>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="text-center">
+                        <div class="bg-white rounded p-4 shadow">
+                            <h5 class="text-dark mb-3">Поддерживаемые форматы данных:</h5>
+                            <div class="row text-dark">
+                                <div class="col-6">
+                                    <strong>Обязательные:</strong><br>
+                                    • Город<br>
+                                    • Товар
+                                </div>
+                                <div class="col-6">
+                                    <strong>Опциональные:</strong><br>
+                                    • Количество<br>
+                                    • Сумма
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-lg-8 mx-auto">
+                    <h2 class="fw-bold">Возможности приложения</h2>
+                    <p class="text-muted">Полный набор инструментов для анализа региональных продаж</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card feature-card border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="text-primary mb-3">
+                                <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+                                </svg>
+                            </div>
+                            <h5>📈 Интерактивные диаграммы</h5>
+                            <p class="text-muted">Круговая диаграмма с процентным распределением продаж по федеральным округам</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card feature-card border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="text-success mb-3">
+                                <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+                                </svg>
+                            </div>
+                            <h5>🗺️ Автоматическое определение регионов</h5>
+                            <p class="text-muted">База данных 65+ российских городов с привязкой к федеральным округам</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card feature-card border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="text-warning mb-3">
+                                <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+                                </svg>
+                            </div>
+                            <h5>🔍 Умная фильтрация</h5>
+                            <p class="text-muted">Фильтры по товарам и регионам с детальной аналитикой</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Regions Section -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 mx-auto text-center">
+                    <h2 class="fw-bold mb-4">Поддерживаемые регионы России</h2>
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-4">
+                            <div class="badge bg-primary p-2 w-100">Центральный ФО</div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="badge bg-success p-2 w-100">Северо-Западный ФО</div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="badge bg-warning p-2 w-100">Южный ФО</div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="badge bg-info p-2 w-100">Северо-Кавказский ФО</div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="badge bg-secondary p-2 w-100">Приволжский ФО</div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="badge bg-danger p-2 w-100">Уральский ФО</div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="badge bg-dark p-2 w-100">Сибирский ФО</div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="badge bg-primary p-2 w-100">Дальневосточный ФО</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 mx-auto text-center">
+                    <h2 class="fw-bold mb-4">Готовы начать анализ?</h2>
+                    <p class="lead text-muted mb-4">Загрузите ваш Excel файл и получите детальную аналитику за несколько секунд</p>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="index_excel.html" class="btn btn-primary btn-lg px-4 me-md-2">🚀 Запустить приложение</a>
+                        <a href="продажи.xlsx" download class="btn btn-outline-primary btn-lg px-4">📁 Скачать пример данных</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-8">
+                    <p class="mb-0">📊 Анализ продаж по регионам - Веб-приложение для анализа региональных продаж</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <p class="mb-0">Создано с помощью Claude Code</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
