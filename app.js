@@ -278,7 +278,8 @@ function processSalesData(data) {
             const qtyValue = row[quantityIndex];
             // Удаляем пробелы и заменяем запятые на точки
             const cleanQty = String(qtyValue || '').replace(/\s/g, '').replace(',', '.');
-            quantity = parseFloat(cleanQty) || 1;
+            const parsedQty = parseFloat(cleanQty);
+            quantity = Number.isNaN(parsedQty) ? 1 : parsedQty;
         }
 
         if (amountIndex !== -1) {
