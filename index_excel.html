@@ -166,6 +166,10 @@
                 </div>
             </div>
         </div>
+        <footer class="text-center text-muted small mt-5">
+            Версия приложения: <span id="appVersion">—</span> ·
+            <a href="changelog.html" class="link-secondary">Журнал изменений</a>
+        </footer>
     </div>
 
     <!-- Подключение библиотек -->
@@ -240,6 +244,16 @@
                 }, 5000);
             }
         }
+    </script>
+
+    <script src="version.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const versionElement = document.getElementById('appVersion');
+            if (versionElement && window.APP_VERSION && window.APP_VERSION.current) {
+                versionElement.textContent = window.APP_VERSION.current;
+            }
+        });
     </script>
 
     <script src="app.js"></script>
