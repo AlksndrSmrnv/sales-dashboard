@@ -436,12 +436,23 @@ function applyFilters() {
 
 // Получение отфильтрованных данных
 function getFilteredData() {
-    const productFilter = document.getElementById('productFilter').value;
-    const warehouseFilter = document.getElementById('warehouseFilter').value;
+    const productFilter = document.getElementById('productFilter');
+    const warehouseFilter = document.getElementById('warehouseFilter');
+
+    // Получаем выбранные значения из multiple select
+    const selectedProducts = Array.from(productFilter.selectedOptions)
+        .map(option => option.value)
+        .filter(value => value !== ""); // Исключаем пустой "Все товары"
+
+    const selectedWarehouses = Array.from(warehouseFilter.selectedOptions)
+        .map(option => option.value)
+        .filter(value => value !== ""); // Исключаем пустой "Все склады"
 
     return salesData.filter(item => {
-        return (!productFilter || item.product === productFilter) &&
-               (!warehouseFilter || item.warehouse === warehouseFilter);
+        const productMatch = selectedProducts.length === 0 || selectedProducts.includes(item.product);
+        const warehouseMatch = selectedWarehouses.length === 0 || selectedWarehouses.includes(item.warehouse);
+
+        return productMatch && warehouseMatch;
     });
 }
 
@@ -547,21 +558,35 @@ function updateTable(warehouseStats) {
 
 // Обновление детальной информации
 function updateDetails() {
-    const productFilter = document.getElementById('productFilter').value;
-    const warehouseFilter = document.getElementById('warehouseFilter').value;
+    const productFilter = document.getElementById('productFilter');
+    const warehouseFilter = document.getElementById('warehouseFilter');
     const detailsContent = document.getElementById('detailsContent');
 
-    if (!productFilter && !warehouseFilter) {
-        detailsContent.innerHTML = '<p class="text-muted">Выберите товар или склад для просмотра детальной информации</p>';
+    // Получаем выбранные значения из multiple select
+    const selectedProducts = Array.from(productFilter.selectedOptions)
+        .map(option => option.value)
+        .filter(value => value !== "");
+
+    const selectedWarehouses = Array.from(warehouseFilter.selectedOptions)
+        .map(option => option.value)
+        .filter(value => value !== "");
+
+    if (selectedProducts.length === 0 && selectedWarehouses.length === 0) {
+        detailsContent.innerHTML = '<p class="text-muted">Выберите товары или склады для просмотра детальной информации</p>';
         return;
     }
 
     const filteredData = getFilteredData();
 
-    if (productFilter) {
-        showProductDetails(productFilter, filteredData, detailsContent);
-    } else if (warehouseFilter) {
-        showWarehouseDetails(warehouseFilter, filteredData, detailsContent);
+    if (selectedProducts.length === 1 && selectedWarehouses.length === 0) {
+        // Показать детали по одному товару
+        showProductDetails(selectedProducts[0], filteredData, detailsContent);
+    } else if (selectedProducts.length === 0 && selectedWarehouses.length === 1) {
+        // Показать детали по одному складу
+        showWarehouseDetails(selectedWarehouses[0], filteredData, detailsContent);
+    } else {
+        // Показать общую статистику по выбранным фильтрам
+        showMultipleSelectionDetails(selectedProducts, selectedWarehouses, filteredData, detailsContent);
     }
 }
 
@@ -634,6 +659,77 @@ function generateColors(count) {
         result.push(colors[i % colors.length]);
     }
     return result;
+}
+
+// Показать детальную информацию для множественного выбора
+function showMultipleSelectionDetails(selectedProducts, selectedWarehouses, data, container) {
+    let html = '<h6>Статистика по выбранным фильтрам:</h6>';
+
+    if (selectedProducts.length > 0) {
+        html += '<h7><strong>Выбранные товары:</strong> ' + selectedProducts.join(', ') + '</h7><br>';
+    }
+
+    if (selectedWarehouses.length > 0) {
+        html += '<h7><strong>Выбранные склады:</strong> ' + selectedWarehouses.join(', ') + '</h7><br>';
+    }
+
+    // Общая статистика
+    const totalOrders = data.reduce((sum, item) => sum + item.quantity, 0);
+    const totalAmount = data.reduce((sum, item) => sum + item.amount, 0);
+
+    html += `<div class="alert alert-info">
+        <strong>Общая статистика:</strong><br>
+        Количество заказов: ${totalOrders}<br>
+        Общая сумма: ${formatCurrency(totalAmount)}
+    </div>`;
+
+    // Если выбрано несколько товаров, показываем разбивку по товарам
+    if (selectedProducts.length > 1) {
+        const productStats = {};
+        data.forEach(item => {
+            if (!productStats[item.product]) {
+                productStats[item.product] = { orders: 0, amount: 0 };
+            }
+            productStats[item.product].orders += item.quantity;
+            productStats[item.product].amount += item.amount;
+        });
+
+        html += '<div class="table-responsive"><h6>Разбивка по товарам:</h6>';
+        html += '<table class="table table-sm"><thead><tr><th>Товар</th><th>Количество</th><th>Сумма</th></tr></thead><tbody>';
+
+        Object.entries(productStats)
+            .sort(([,a], [,b]) => b.orders - a.orders)
+            .forEach(([product, stats]) => {
+                html += `<tr><td>${product}</td><td>${stats.orders}</td><td>${formatCurrency(stats.amount)}</td></tr>`;
+            });
+
+        html += '</tbody></table></div>';
+    }
+
+    // Если выбрано несколько складов, показываем разбивку по складам
+    if (selectedWarehouses.length > 1) {
+        const warehouseStats = {};
+        data.forEach(item => {
+            if (!warehouseStats[item.warehouse]) {
+                warehouseStats[item.warehouse] = { orders: 0, amount: 0 };
+            }
+            warehouseStats[item.warehouse].orders += item.quantity;
+            warehouseStats[item.warehouse].amount += item.amount;
+        });
+
+        html += '<div class="table-responsive"><h6>Разбивка по складам:</h6>';
+        html += '<table class="table table-sm"><thead><tr><th>Склад</th><th>Количество</th><th>Сумма</th></tr></thead><tbody>';
+
+        Object.entries(warehouseStats)
+            .sort(([,a], [,b]) => b.orders - a.orders)
+            .forEach(([warehouse, stats]) => {
+                html += `<tr><td>${warehouse}</td><td>${stats.orders}</td><td>${formatCurrency(stats.amount)}</td></tr>`;
+            });
+
+        html += '</tbody></table></div>';
+    }
+
+    container.innerHTML = html;
 }
 
 // Форматирование валюты
