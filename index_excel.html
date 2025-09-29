@@ -5,56 +5,465 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Анализ продаж по складам - Excel</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --lime-green: #c0ff00;
+            --lime-green-light: #d4ff4d;
+            --lime-green-dark: #9acc00;
+            --lime-green-alpha: rgba(192, 255, 0, 0.15);
+            --black: #000000;
+            --dark-gray: #1a1a1a;
+            --medium-gray: #666666;
+            --light-gray: #f5f5f5;
+            --white: #ffffff;
+            --border-radius: 12px;
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(180deg, var(--white) 0%, var(--light-gray) 100%);
+            color: var(--dark-gray);
+            line-height: 1.6;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--lime-green) 0%, var(--lime-green-light) 50%, var(--lime-green) 100%);
+            z-index: 9999;
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                max-height: 500px;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        .slide-down {
+            animation: slideDown 0.5s ease-out forwards;
+        }
+
         .card-custom {
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: var(--white);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--lime-green-alpha);
             border: none;
-            margin-bottom: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 24px;
+            transition: all var(--transition-speed) ease;
+            overflow: hidden;
+            position: relative;
         }
+
+        .card-custom::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--lime-green) 0%, var(--lime-green-light) 100%);
+            opacity: 0;
+            transition: opacity var(--transition-speed) ease;
+        }
+
+        .card-custom:hover {
+            box-shadow: 0 4px 20px rgba(192, 255, 0, 0.2), 0 0 0 2px var(--lime-green);
+            transform: translateY(-2px);
+        }
+
+        .card-custom:hover::before {
+            opacity: 1;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--lime-green) 0%, var(--lime-green-dark) 100%) !important;
+            border-bottom: none !important;
+            padding: 20px 24px !important;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--black);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
         .upload-area {
-            border: 2px dashed #dee2e6;
-            border-radius: 10px;
-            padding: 40px;
+            border: 3px dashed var(--lime-green);
+            border-radius: var(--border-radius);
+            padding: 60px 40px;
             text-align: center;
-            transition: border-color 0.3s;
+            transition: all var(--transition-speed) ease;
+            background: linear-gradient(135deg, var(--white) 0%, var(--lime-green-alpha) 100%);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
+
+        .upload-area::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--lime-green-alpha) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            transition: all 0.6s ease;
+        }
+
         .upload-area:hover {
-            border-color: #0d6efd;
+            border-color: var(--lime-green-dark);
+            background: linear-gradient(135deg, var(--lime-green-alpha) 0%, rgba(192, 255, 0, 0.25) 100%);
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 30px rgba(192, 255, 0, 0.3);
         }
+
+        .upload-area:hover::after {
+            width: 500px;
+            height: 500px;
+        }
+
+        .upload-area input[type="file"] {
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .upload-area input[type="file"]:hover {
+            transform: scale(1.02);
+        }
+
         .chart-container {
             position: relative;
             height: 400px;
             width: 100%;
-        }
-        .table-responsive {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .filter-section {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        .status {
             padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
         }
+
+        .table-responsive {
+            max-height: 450px;
+            overflow-y: auto;
+            border-radius: 8px;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: linear-gradient(135deg, var(--black) 0%, var(--dark-gray) 100%) !important;
+            color: var(--lime-green);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            padding: 16px;
+            border: none;
+            border-bottom: 3px solid var(--lime-green);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .table tbody tr {
+            transition: all var(--transition-speed) ease;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .table tbody tr:hover {
+            background: linear-gradient(90deg, var(--lime-green-alpha) 0%, rgba(192, 255, 0, 0.25) 50%, var(--lime-green-alpha) 100%);
+            transform: scale(1.01);
+            box-shadow: 0 2px 8px rgba(192, 255, 0, 0.3);
+            border-left: 4px solid var(--lime-green);
+        }
+
+        .table tbody td {
+            padding: 16px;
+            vertical-align: middle;
+            color: var(--dark-gray);
+        }
+
+        .filter-section {
+            background: linear-gradient(135deg, var(--lime-green-alpha) 0%, rgba(192, 255, 0, 0.05) 100%);
+            padding: 28px;
+            border-radius: var(--border-radius);
+            margin-bottom: 24px;
+            border: 2px solid var(--lime-green);
+            box-shadow: 0 4px 16px rgba(192, 255, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .filter-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, var(--lime-green-alpha) 0%, transparent 70%);
+            opacity: 0.5;
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .filter-section > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .filter-section h5 {
+            color: var(--black);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .form-select, .form-control {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            transition: all var(--transition-speed) ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-select:focus, .form-control:focus {
+            border-color: var(--lime-green);
+            box-shadow: 0 0 0 3px rgba(192, 255, 0, 0.1);
+            outline: none;
+        }
+
+        .form-select:hover, .form-control:hover {
+            border-color: var(--lime-green);
+            background-color: var(--lime-green-alpha);
+        }
+
+        .form-select option:checked {
+            background-color: var(--lime-green);
+            color: var(--black);
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: var(--dark-gray);
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .status {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 12px 0;
+            font-weight: 500;
+            animation: slideDown 0.4s ease-out;
+            border-left: 4px solid transparent;
+        }
+
         .status-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background-color: rgba(192, 255, 0, 0.15);
+            color: var(--black);
+            border-left-color: var(--lime-green);
         }
+
         .status-error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background-color: #ffe5e5;
+            color: #c41e3a;
+            border-left-color: #c41e3a;
         }
+
         .status-warning {
-            background-color: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
+            background-color: #fff4e5;
+            color: #e67e22;
+            border-left-color: #e67e22;
+        }
+
+        h1 {
+            color: var(--black);
+            font-weight: 900;
+            font-size: 3rem;
+            margin-bottom: 32px;
+            letter-spacing: -0.03em;
+            position: relative;
+            display: inline-block;
+            padding-bottom: 16px;
+        }
+
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 5px;
+            background: linear-gradient(90deg, var(--lime-green) 0%, var(--lime-green-light) 100%);
+            border-radius: 3px;
+        }
+
+        .text-primary {
+            color: var(--black) !important;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--lime-green) 0%, var(--lime-green-light) 100%);
+            border: 2px solid var(--black);
+            color: var(--black);
+            font-weight: 700;
+            padding: 14px 36px;
+            border-radius: 8px;
+            transition: all var(--transition-speed) ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 0 var(--black);
+            position: relative;
+            top: 0;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--lime-green-light) 0%, var(--lime-green) 100%);
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 var(--black);
+            top: 2px;
+        }
+
+        .btn-primary:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 var(--black);
+            top: 4px;
+        }
+
+        footer {
+            margin-top: 60px;
+            padding: 32px 24px;
+            color: var(--black);
+            font-size: 0.9rem;
+            background: linear-gradient(135deg, var(--lime-green) 0%, var(--lime-green-dark) 100%);
+            border-top: 4px solid var(--black);
+            font-weight: 600;
+        }
+
+        footer a {
+            color: var(--black);
+            text-decoration: none;
+            transition: all var(--transition-speed) ease;
+            border-bottom: 2px solid var(--black);
+            padding-bottom: 2px;
+        }
+
+        footer a:hover {
+            border-bottom-color: var(--white);
+            color: var(--white);
+        }
+
+        #appVersion {
+            font-weight: 700;
+            background: var(--black);
+            color: var(--lime-green);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Scrollbar styling */
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: var(--light-gray);
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: var(--lime-green);
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: var(--dark-green);
+        }
+
+        small.text-muted {
+            color: var(--medium-gray) !important;
+            font-size: 0.85rem;
+        }
+
+        .alert-info {
+            background-color: rgba(192, 255, 0, 0.1);
+            border: 1px solid var(--lime-green);
+            color: var(--black);
+            border-radius: 8px;
+            padding: 16px;
         }
     </style>
 </head>
@@ -62,7 +471,7 @@
     <div class="container-fluid py-4">
         <div class="row">
             <div class="col-12">
-                <h1 class="text-center mb-4 text-primary">📊 Анализ продаж по складам</h1>
+                <h1 class="text-center mb-4 text-primary">Анализ продаж по складам</h1>
                 <div id="statusArea"></div>
             </div>
         </div>
@@ -72,7 +481,7 @@
             <div class="col-12">
                 <div class="card card-custom">
                     <div class="card-header">
-                        <h5 class="mb-0">📁 Загрузка файла Excel</h5>
+                        <h5 class="mb-0">Загрузка файла Excel</h5>
                     </div>
                     <div class="card-body">
                         <div class="upload-area">
@@ -89,7 +498,7 @@
         <div id="filtersSection" class="row mb-4" style="display: none;">
             <div class="col-12">
                 <div class="filter-section">
-                    <h5 class="mb-3">🔍 Фильтры</h5>
+                    <h5 class="mb-3">Фильтры</h5>
                     <div class="row">
                         <div class="col-md-6">
                             <label for="productFilter" class="form-label">Фильтр по товару:</label>
@@ -117,7 +526,7 @@
                 <div class="col-lg-6">
                     <div class="card card-custom">
                         <div class="card-header">
-                            <h5 class="mb-0">📈 Распределение продаж по складам</h5>
+                            <h5 class="mb-0">Распределение продаж по складам</h5>
                         </div>
                         <div class="card-body">
                             <div class="chart-container">
@@ -131,7 +540,7 @@
                 <div class="col-lg-6">
                     <div class="card card-custom">
                         <div class="card-header">
-                            <h5 class="mb-0">📋 Статистика по складам</h5>
+                            <h5 class="mb-0">Статистика по складам</h5>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -157,7 +566,7 @@
                 <div class="col-12">
                     <div class="card card-custom">
                         <div class="card-header">
-                            <h5 class="mb-0">📊 Детальная информация</h5>
+                            <h5 class="mb-0">Детальная информация</h5>
                         </div>
                         <div class="card-body">
                             <div id="detailsContent">
@@ -238,12 +647,30 @@
                 statusClass = 'status-warning';
             }
 
-            statusArea.innerHTML = `<div class="status ${statusClass}">${message}</div>`;
+            statusArea.innerHTML = `<div class="status ${statusClass} slide-down">${message}</div>`;
 
             if (type === 'success' || type === 'warning') {
                 setTimeout(() => {
-                    statusArea.innerHTML = '';
+                    const statusElement = statusArea.querySelector('.status');
+                    if (statusElement) {
+                        statusElement.style.opacity = '0';
+                        statusElement.style.transform = 'translateY(-10px)';
+                        setTimeout(() => {
+                            statusArea.innerHTML = '';
+                        }, 300);
+                    }
                 }, 5000);
+            }
+        }
+
+        // Add fade-in animation to sections when they become visible
+        function showSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.style.display = 'block';
+                setTimeout(() => {
+                    section.classList.add('fade-in');
+                }, 10);
             }
         }
     </script>
