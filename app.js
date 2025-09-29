@@ -371,21 +371,32 @@ function findColumnIndex(headers, possibleNames) {
 
 // Получение склада по городу
 function getWarehouseByCity(city) {
-    const normalizedCity = city.trim();
-
-    // Прямое соответствие
-    if (cityToWarehouse[normalizedCity]) {
-        return cityToWarehouse[normalizedCity];
+    if (typeof city !== 'string') {
+        return 'Другие склады';
     }
 
-    // Поиск по частичному совпадению
+    const normalizedCity = city.trim().toLowerCase();
+    if (!normalizedCity) {
+        return 'Другие склады';
+    }
+
+    let partialMatchRegion = null;
+
     for (const [knownCity, region] of Object.entries(cityToWarehouse)) {
-        if (normalizedCity.includes(knownCity) || knownCity.includes(normalizedCity)) {
+        const normalizedKnownCity = knownCity.trim().toLowerCase();
+
+        // Прямое соответствие
+        if (normalizedCity === normalizedKnownCity) {
             return region;
+        }
+
+        // Поиск по частичному совпадению
+        if (!partialMatchRegion && (normalizedCity.includes(normalizedKnownCity) || normalizedKnownCity.includes(normalizedCity))) {
+            partialMatchRegion = region;
         }
     }
 
-    return 'Другие склады';
+    return partialMatchRegion || 'Другие склады';
 }
 
 // Обновление фильтров
