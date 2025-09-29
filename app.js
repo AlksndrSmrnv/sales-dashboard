@@ -359,13 +359,15 @@ function processSalesData(data) {
     // Находим индексы нужных колонок
     const cityIndex = findColumnIndex(headers, ['город', 'city', 'City', 'ГОРОД', 'город доставки']);
     const productIndex = findColumnIndex(headers, ['товар', 'product', 'наименование', 'Product', 'ТОВАР', 'название']);
+    const nomenclatureIndex = findColumnIndex(headers, ['номенклатура', 'nomenclature', 'артикул', 'код', 'Номенклатура', 'НОМЕНКЛАТУРА']);
     const quantityIndex = findColumnIndex(headers, ['количество', 'quantity', 'кол-во', 'Quantity', 'КОЛИЧЕСТВО', 'qty', 'доставлено шт', 'заказано шт']);
     const amountIndex = findColumnIndex(headers, ['сумма', 'amount', 'стоимость', 'Amount', 'СУММА', 'price', 'цена', 'общая сумма', 'итого', 'доставлено руб', 'заказано руб']);
 
-    console.log('Найденные индексы:', { cityIndex, productIndex, quantityIndex, amountIndex });
+    console.log('Найденные индексы:', { cityIndex, productIndex, nomenclatureIndex, quantityIndex, amountIndex });
     console.log('Заголовки по индексам:', {
         city: headers[cityIndex],
         product: headers[productIndex],
+        nomenclature: headers[nomenclatureIndex],
         quantity: headers[quantityIndex],
         amount: headers[amountIndex]
     });
@@ -376,8 +378,9 @@ function processSalesData(data) {
 Доступные заголовки: ${headers.join(', ')}
 
 Ожидаемые названия колонок:
-• Город: "город", "city", "City", "ГОРОД"
-• Товар: "товар", "product", "наименование", "Product", "ТОВАР"`;
+• Город: "город", "city", "City", "ГОРОД", "город доставки"
+• Товар: "товар", "product", "наименование", "Product", "ТОВАР"
+• Номенклатура (опционально): "номенклатура", "артикул", "код"`;
 
         if (typeof showStatus === 'function') {
             showStatus(errorMessage, 'error');
@@ -400,6 +403,7 @@ function processSalesData(data) {
 
         const city = String(row[cityIndex] || '').trim();
         const product = String(row[productIndex] || '').trim();
+        const nomenclature = nomenclatureIndex !== -1 ? String(row[nomenclatureIndex] || '').trim() : '';
 
         // Более надежная обработка числовых значений
         let quantity = 1;
@@ -422,10 +426,14 @@ function processSalesData(data) {
 
         if (city && product) {
             const warehouse = getWarehouseByRegion(city);
+            // Формируем полное название товара с номенклатурой
+            const fullProductName = nomenclature ? `${nomenclature} - ${product}` : product;
+
             salesData.push({
                 city,
                 warehouse,
-                product,
+                product: fullProductName,
+                nomenclature,
                 quantity,
                 amount
             });
@@ -436,7 +444,8 @@ function processSalesData(data) {
                 console.log(`📦 Строка ${i + 1}:`, {
                     city,
                     warehouse,
-                    product,
+                    nomenclature,
+                    product: fullProductName,
                     quantityRaw: quantityIndex !== -1 ? row[quantityIndex] : 'N/A',
                     quantity,
                     amountRaw: amountIndex !== -1 ? row[amountIndex] : 'N/A',
@@ -650,7 +659,6 @@ function updateFilters() {
 // Применение фильтров
 function applyFilters() {
     updateVisualization();
-    updateDetails();
 }
 
 // Получение отфильтрованных данных
@@ -678,277 +686,144 @@ function getFilteredData() {
 // Обновление визуализации
 function updateVisualization() {
     const filteredData = getFilteredData();
+    updatePivotTable(filteredData);
+}
 
-    // Агрегация данных по складам
-    const warehouseStats = {};
-    filteredData.forEach(item => {
-        if (!warehouseStats[item.warehouse]) {
-            warehouseStats[item.warehouse] = {
-                orders: 0,
-                amount: 0
-            };
+// Обновление pivot таблицы (товары × склады)
+function updatePivotTable(data) {
+    const thead = document.getElementById('pivotTableHeader');
+    const tbody = document.getElementById('pivotTableBody');
+
+    // Получаем уникальные товары и склады
+    const products = [...new Set(data.map(item => item.product))].sort();
+    const warehouses = [...new Set(data.map(item => item.warehouse))].sort();
+
+    // Строим pivot структуру: товар -> склад -> {quantity, amount}
+    const pivot = {};
+    data.forEach(item => {
+        if (!pivot[item.product]) {
+            pivot[item.product] = {};
         }
-        warehouseStats[item.warehouse].orders += item.quantity;
-        warehouseStats[item.warehouse].amount += item.amount;
+        if (!pivot[item.product][item.warehouse]) {
+            pivot[item.product][item.warehouse] = { quantity: 0, amount: 0 };
+        }
+        pivot[item.product][item.warehouse].quantity += item.quantity;
+        pivot[item.product][item.warehouse].amount += item.amount;
     });
 
-    updateChart(warehouseStats);
-    updateTable(warehouseStats);
-}
+    // Заполняем заголовок таблицы
+    thead.innerHTML = '<th>Товар</th>';
+    warehouses.forEach(warehouse => {
+        const th = document.createElement('th');
+        th.textContent = warehouse;
+        thead.appendChild(th);
+    });
+    // Добавляем столбец "Итого"
+    const thTotal = document.createElement('th');
+    thTotal.textContent = 'Итого';
+    thead.appendChild(thTotal);
 
-// Обновление круговой диаграммы
-function updateChart(warehouseStats) {
-    if (typeof Chart === 'undefined') {
-        console.error('Chart.js не доступен');
-        document.getElementById('warehouseChart').parentElement.innerHTML =
-            '<p class="text-danger">Ошибка загрузки Chart.js</p>';
-        return;
-    }
-
-    const ctx = document.getElementById('warehouseChart').getContext('2d');
-
-    if (chart) {
-        chart.destroy();
-    }
-
-    const labels = Object.keys(warehouseStats);
-    const data = Object.values(warehouseStats).map(stat => stat.orders);
-    const colors = generateColors(labels.length);
-
-    try {
-        chart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: colors,
-                    borderWidth: 2,
-                    borderColor: '#fff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label;
-                                const value = context.parsed;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return `${label}: ${value} заказов (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    } catch (error) {
-        console.error('Ошибка создания диаграммы:', error);
-        document.getElementById('warehouseChart').parentElement.innerHTML =
-            '<p class="text-danger">Ошибка создания диаграммы: ' + error.message + '</p>';
-    }
-}
-
-// Обновление таблицы
-function updateTable(warehouseStats) {
-    const tbody = document.getElementById('warehouseTableBody');
+    // Заполняем тело таблицы
     tbody.innerHTML = '';
-
-    // Сортируем склады по количеству заказов
-    const sortedWarehouses = Object.entries(warehouseStats)
-        .sort(([,a], [,b]) => b.orders - a.orders);
-
-    sortedWarehouses.forEach(([region, stats]) => {
+    products.forEach(product => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${region}</td>
-            <td>${stats.orders}</td>
-            <td>${formatCurrency(stats.amount)}</td>
+
+        // Первая ячейка - название товара
+        const productCell = document.createElement('td');
+        productCell.textContent = product;
+        productCell.style.fontWeight = '600';
+        row.appendChild(productCell);
+
+        let totalQuantity = 0;
+        let totalAmount = 0;
+
+        // Ячейки для каждого склада
+        warehouses.forEach(warehouse => {
+            const cell = document.createElement('td');
+            const stats = pivot[product] && pivot[product][warehouse];
+
+            if (stats && stats.quantity > 0) {
+                cell.innerHTML = `
+                    <div style="font-weight: 500;">${stats.quantity} шт</div>
+                    <div style="font-size: 0.85em; color: #666;">${formatCurrency(stats.amount)}</div>
+                `;
+                totalQuantity += stats.quantity;
+                totalAmount += stats.amount;
+            } else {
+                cell.textContent = '—';
+                cell.style.color = '#ccc';
+                cell.style.textAlign = 'center';
+            }
+
+            row.appendChild(cell);
+        });
+
+        // Ячейка "Итого" для товара
+        const totalCell = document.createElement('td');
+        totalCell.innerHTML = `
+            <div style="font-weight: 700;">${totalQuantity} шт</div>
+            <div style="font-size: 0.85em; color: #666;">${formatCurrency(totalAmount)}</div>
         `;
+        totalCell.style.backgroundColor = 'rgba(192, 255, 0, 0.15)';
+        row.appendChild(totalCell);
+
         tbody.appendChild(row);
     });
-}
 
-// Обновление детальной информации
-function updateDetails() {
-    const productFilter = document.getElementById('productFilter');
-    const warehouseFilter = document.getElementById('warehouseFilter');
-    const detailsContent = document.getElementById('detailsContent');
+    // Добавляем строку "Итого" для складов
+    const totalRow = document.createElement('tr');
+    totalRow.style.fontWeight = '700';
+    totalRow.style.backgroundColor = 'rgba(192, 255, 0, 0.25)';
 
-    // Получаем выбранные значения из multiple select
-    const selectedProducts = Array.from(productFilter.selectedOptions)
-        .map(option => option.value)
-        .filter(value => value !== "");
+    const totalLabelCell = document.createElement('td');
+    totalLabelCell.textContent = 'ИТОГО';
+    totalRow.appendChild(totalLabelCell);
 
-    const selectedWarehouses = Array.from(warehouseFilter.selectedOptions)
-        .map(option => option.value)
-        .filter(value => value !== "");
+    let grandTotalQuantity = 0;
+    let grandTotalAmount = 0;
 
-    if (selectedProducts.length === 0 && selectedWarehouses.length === 0) {
-        detailsContent.innerHTML = '<p class="text-muted">Выберите товары или склады для просмотра детальной информации</p>';
-        return;
-    }
+    warehouses.forEach(warehouse => {
+        const cell = document.createElement('td');
+        let warehouseQuantity = 0;
+        let warehouseAmount = 0;
 
-    const filteredData = getFilteredData();
-
-    if (selectedProducts.length === 1 && selectedWarehouses.length === 0) {
-        // Показать детали по одному товару
-        showProductDetails(selectedProducts[0], filteredData, detailsContent);
-    } else if (selectedProducts.length === 0 && selectedWarehouses.length === 1) {
-        // Показать детали по одному складу
-        showWarehouseDetails(selectedWarehouses[0], filteredData, detailsContent);
-    } else {
-        // Показать общую статистику по выбранным фильтрам
-        showMultipleSelectionDetails(selectedProducts, selectedWarehouses, filteredData, detailsContent);
-    }
-}
-
-// Показать детали по товару
-function showProductDetails(product, data, container) {
-    const productData = data.filter(item => item.product === product);
-    const warehouseStats = {};
-
-    productData.forEach(item => {
-        if (!warehouseStats[item.warehouse]) {
-            warehouseStats[item.warehouse] = { orders: 0, amount: 0 };
-        }
-        warehouseStats[item.warehouse].orders += item.quantity;
-        warehouseStats[item.warehouse].amount += item.amount;
-    });
-
-    const sortedWarehouses = Object.entries(warehouseStats)
-        .sort(([,a], [,b]) => b.orders - a.orders);
-
-    let html = `<h6>Продажи товара "${product}" по складам:</h6>`;
-    html += '<div class="table-responsive"><table class="table table-sm">';
-    html += '<thead><tr><th>Склад</th><th>Количество</th><th>Сумма</th></tr></thead><tbody>';
-
-    sortedWarehouses.forEach(([region, stats]) => {
-        html += `<tr><td>${region}</td><td>${stats.orders}</td><td>${formatCurrency(stats.amount)}</td></tr>`;
-    });
-
-    html += '</tbody></table></div>';
-    container.innerHTML = html;
-}
-
-// Показать детали по складу
-function showWarehouseDetails(region, data, container) {
-    const warehouseData = data.filter(item => item.warehouse === region);
-    const productStats = {};
-
-    warehouseData.forEach(item => {
-        if (!productStats[item.product]) {
-            productStats[item.product] = { orders: 0, amount: 0 };
-        }
-        productStats[item.product].orders += item.quantity;
-        productStats[item.product].amount += item.amount;
-    });
-
-    const sortedProducts = Object.entries(productStats)
-        .sort(([,a], [,b]) => b.orders - a.orders);
-
-    let html = `<h6>Товары на складе "${region}":</h6>`;
-    html += '<div class="table-responsive"><table class="table table-sm">';
-    html += '<thead><tr><th>Товар</th><th>Количество</th><th>Сумма</th></tr></thead><tbody>';
-
-    sortedProducts.forEach(([product, stats]) => {
-        html += `<tr><td>${product}</td><td>${stats.orders}</td><td>${formatCurrency(stats.amount)}</td></tr>`;
-    });
-
-    html += '</tbody></table></div>';
-    container.innerHTML = html;
-}
-
-// Генерация цветов для диаграммы
-function generateColors(count) {
-    const colors = [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
-        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-        '#4BC0C0', '#FF6384', '#36A2EB', '#FFCE56'
-    ];
-
-    const result = [];
-    for (let i = 0; i < count; i++) {
-        result.push(colors[i % colors.length]);
-    }
-    return result;
-}
-
-// Показать детальную информацию для множественного выбора
-function showMultipleSelectionDetails(selectedProducts, selectedWarehouses, data, container) {
-    let html = '<h6>Статистика по выбранным фильтрам:</h6>';
-
-    if (selectedProducts.length > 0) {
-        html += '<h7><strong>Выбранные товары:</strong> ' + selectedProducts.join(', ') + '</h7><br>';
-    }
-
-    if (selectedWarehouses.length > 0) {
-        html += '<h7><strong>Выбранные склады:</strong> ' + selectedWarehouses.join(', ') + '</h7><br>';
-    }
-
-    // Общая статистика
-    const totalOrders = data.reduce((sum, item) => sum + item.quantity, 0);
-    const totalAmount = data.reduce((sum, item) => sum + item.amount, 0);
-
-    html += `<div class="alert alert-info">
-        <strong>Общая статистика:</strong><br>
-        Количество заказов: ${totalOrders}<br>
-        Общая сумма: ${formatCurrency(totalAmount)}
-    </div>`;
-
-    // Если выбрано несколько товаров, показываем разбивку по товарам
-    if (selectedProducts.length > 1) {
-        const productStats = {};
         data.forEach(item => {
-            if (!productStats[item.product]) {
-                productStats[item.product] = { orders: 0, amount: 0 };
+            if (item.warehouse === warehouse) {
+                warehouseQuantity += item.quantity;
+                warehouseAmount += item.amount;
             }
-            productStats[item.product].orders += item.quantity;
-            productStats[item.product].amount += item.amount;
         });
 
-        html += '<div class="table-responsive"><h6>Разбивка по товарам:</h6>';
-        html += '<table class="table table-sm"><thead><tr><th>Товар</th><th>Количество</th><th>Сумма</th></tr></thead><tbody>';
+        if (warehouseQuantity > 0) {
+            cell.innerHTML = `
+                <div>${warehouseQuantity} шт</div>
+                <div style="font-size: 0.85em;">${formatCurrency(warehouseAmount)}</div>
+            `;
+            grandTotalQuantity += warehouseQuantity;
+            grandTotalAmount += warehouseAmount;
+        } else {
+            cell.textContent = '—';
+        }
 
-        Object.entries(productStats)
-            .sort(([,a], [,b]) => b.orders - a.orders)
-            .forEach(([product, stats]) => {
-                html += `<tr><td>${product}</td><td>${stats.orders}</td><td>${formatCurrency(stats.amount)}</td></tr>`;
-            });
+        totalRow.appendChild(cell);
+    });
 
-        html += '</tbody></table></div>';
+    // Ячейка "Итого ИТОГО"
+    const grandTotalCell = document.createElement('td');
+    grandTotalCell.innerHTML = `
+        <div>${grandTotalQuantity} шт</div>
+        <div style="font-size: 0.85em;">${formatCurrency(grandTotalAmount)}</div>
+    `;
+    grandTotalCell.style.backgroundColor = 'rgba(192, 255, 0, 0.35)';
+    totalRow.appendChild(grandTotalCell);
+
+    tbody.appendChild(totalRow);
+
+    // Показываем кнопку экспорта
+    const exportButton = document.getElementById('exportButton');
+    if (exportButton) {
+        exportButton.style.display = 'block';
     }
-
-    // Если выбрано несколько складов, показываем разбивку по складам
-    if (selectedWarehouses.length > 1) {
-        const warehouseStats = {};
-        data.forEach(item => {
-            if (!warehouseStats[item.warehouse]) {
-                warehouseStats[item.warehouse] = { orders: 0, amount: 0 };
-            }
-            warehouseStats[item.warehouse].orders += item.quantity;
-            warehouseStats[item.warehouse].amount += item.amount;
-        });
-
-        html += '<div class="table-responsive"><h6>Разбивка по складам:</h6>';
-        html += '<table class="table table-sm"><thead><tr><th>Склад</th><th>Количество</th><th>Сумма</th></tr></thead><tbody>';
-
-        Object.entries(warehouseStats)
-            .sort(([,a], [,b]) => b.orders - a.orders)
-            .forEach(([warehouse, stats]) => {
-                html += `<tr><td>${warehouse}</td><td>${stats.orders}</td><td>${formatCurrency(stats.amount)}</td></tr>`;
-            });
-
-        html += '</tbody></table></div>';
-    }
-
-    container.innerHTML = html;
 }
 
 // Форматирование валюты
@@ -957,4 +832,120 @@ function formatCurrency(amount) {
         style: 'currency',
         currency: 'RUB'
     }).format(amount);
+}
+
+// Экспорт таблицы в Excel
+function exportToExcel() {
+    try {
+        if (typeof XLSX === 'undefined') {
+            alert('Библиотека XLSX не загружена. Проверьте подключение к интернету.');
+            return;
+        }
+
+        const filteredData = getFilteredData();
+        if (filteredData.length === 0) {
+            alert('Нет данных для экспорта');
+            return;
+        }
+
+        // Получаем уникальные товары и склады
+        const products = [...new Set(filteredData.map(item => item.product))].sort();
+        const warehouses = [...new Set(filteredData.map(item => item.warehouse))].sort();
+
+        // Строим pivot структуру
+        const pivot = {};
+        filteredData.forEach(item => {
+            if (!pivot[item.product]) {
+                pivot[item.product] = {};
+            }
+            if (!pivot[item.product][item.warehouse]) {
+                pivot[item.product][item.warehouse] = { quantity: 0, amount: 0 };
+            }
+            pivot[item.product][item.warehouse].quantity += item.quantity;
+            pivot[item.product][item.warehouse].amount += item.amount;
+        });
+
+        // Создаем массив массивов для Excel
+        const data = [];
+
+        // Заголовок
+        const header = ['Товар', ...warehouses, 'Итого (кол-во)', 'Итого (сумма)'];
+        data.push(header);
+
+        // Строки с товарами
+        products.forEach(product => {
+            const row = [product];
+            let totalQuantity = 0;
+            let totalAmount = 0;
+
+            warehouses.forEach(warehouse => {
+                const stats = pivot[product] && pivot[product][warehouse];
+                if (stats && stats.quantity > 0) {
+                    row.push(`${stats.quantity} шт / ${stats.amount.toFixed(2)} ₽`);
+                    totalQuantity += stats.quantity;
+                    totalAmount += stats.amount;
+                } else {
+                    row.push('—');
+                }
+            });
+
+            row.push(totalQuantity);
+            row.push(totalAmount.toFixed(2));
+            data.push(row);
+        });
+
+        // Итоговая строка
+        const totalRow = ['ИТОГО'];
+        let grandTotalQuantity = 0;
+        let grandTotalAmount = 0;
+
+        warehouses.forEach(warehouse => {
+            let warehouseQuantity = 0;
+            let warehouseAmount = 0;
+
+            filteredData.forEach(item => {
+                if (item.warehouse === warehouse) {
+                    warehouseQuantity += item.quantity;
+                    warehouseAmount += item.amount;
+                }
+            });
+
+            totalRow.push(warehouseQuantity > 0 ? `${warehouseQuantity} шт / ${warehouseAmount.toFixed(2)} ₽` : '—');
+            grandTotalQuantity += warehouseQuantity;
+            grandTotalAmount += warehouseAmount;
+        });
+
+        totalRow.push(grandTotalQuantity);
+        totalRow.push(grandTotalAmount.toFixed(2));
+        data.push(totalRow);
+
+        // Создаем книгу и лист
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(data);
+
+        // Устанавливаем ширину колонок
+        const colWidths = [{ wch: 30 }]; // Первая колонка (товар) шире
+        for (let i = 0; i < warehouses.length + 2; i++) {
+            colWidths.push({ wch: 20 });
+        }
+        ws['!cols'] = colWidths;
+
+        // Добавляем лист в книгу
+        XLSX.utils.book_append_sheet(wb, ws, 'Матрица продаж');
+
+        // Генерируем имя файла с датой
+        const date = new Date();
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const fileName = `Матрица_продаж_${dateStr}.xlsx`;
+
+        // Сохраняем файл
+        XLSX.writeFile(wb, fileName);
+
+        if (typeof showStatus === 'function') {
+            showStatus(`Файл ${fileName} успешно сохранен`, 'success');
+        }
+    } catch (error) {
+        console.error('Ошибка экспорта:', error);
+        alert('Ошибка при экспорте в Excel: ' + error.message);
+    }
 }
